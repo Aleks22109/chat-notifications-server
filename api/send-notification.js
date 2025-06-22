@@ -16,10 +16,11 @@ export default async function handler(req, res) {
     return res.status(405).send('Only POST requests are allowed');
   }
 
-  const { senderName, messageText } = req.body;
+  // Получаем новые данные, включая senderId
+  const { senderName, messageText, senderId } = req.body;
 
-  if (!senderName || !messageText) {
-    return res.status(400).send('Missing senderName or messageText');
+  if (!senderName || !messageText || !senderId) {
+    return res.status(400).send('Missing senderName, messageText, or senderId');
   }
 
   try {
@@ -28,7 +29,8 @@ export default async function handler(req, res) {
     const tokens = [];
 
     usersSnapshot.forEach(doc => {
-      if (doc.id !== senderName && doc.data().token) {
+      // Теперь исключаем по senderId (doc.id это uid пользователя)
+      if (doc.id !== senderId && doc.data().token) {
         tokens.push(doc.data().token);
       }
     });
@@ -43,10 +45,8 @@ export default async function handler(req, res) {
       };
 
       await admin.messaging().sendToDevice(tokens, payload);
-      console.log("Successfully sent message.");
       return res.status(200).json({ success: true, message: `Notification sent to ${tokens.length} users.` });
     } else {
-      console.log("No tokens to send notification to.");
       return res.status(200).json({ success: true, message: 'No other users to notify.' });
     }
   } catch (error) {
